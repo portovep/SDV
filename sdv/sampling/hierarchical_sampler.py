@@ -114,7 +114,7 @@ class BaseHierarchicalSampler():
                 sampled_data[child_name] = pd.concat(
                     [previous, sampled_rows]).reset_index(drop=True)
 
-    def _sample_table(self, table_name, sampled_data):
+    def _sample_table(self, table_name, sampled_data, visited_tables=None):
         """Recursively sample every table.
 
         Sample top level tables first, then their children, and so on.
@@ -124,10 +124,20 @@ class BaseHierarchicalSampler():
                 Name of the table to sample.
             sampled_data (dict):
                 A dictionary mapping table names to sampled tables (pd.DataFrame).
+            visited_tables (set):
+                A set of table names that have already been visited.
         """
+        if visited_tables is None:
+            visited_tables = set()
+        visited_tables.add(table_name)
+        
         for parent_name in self.metadata._get_parent_map()[table_name]:
-            if parent_name not in sampled_data:
-                self._sample_table(table_name=parent_name, sampled_data=sampled_data)
+            if parent_name not in visited_tables:
+                self._sample_table(
+                    table_name=parent_name,
+                    sampled_data=sampled_data,
+                    visited_tables=visited_tables
+                )
                 return  # Optimization to avoid iterating through the same nodes multiple times
 
         for child_name in self.metadata._get_child_map()[table_name]:
@@ -139,7 +149,7 @@ class BaseHierarchicalSampler():
                         parent_row=row,
                         sampled_data=sampled_data
                     )
-                self._sample_table(table_name=child_name, sampled_data=sampled_data)
+            self._sample_table(table_name=child_name, sampled_data=sampled_data, visited_tables=visited_tables)
 
     def _finalize(self, sampled_data):
         """Remove extra columns from sampled tables and apply finishing touches.

@@ -932,3 +932,269 @@ class TestHMASynthesizer:
         # Assert data values all exist in the original tables
         for table_name, table in samples.items():
             assert table['data'].isin(data[table_name]['data']).all()
+
+    def test_hma_two_rootparents_two_children_one_grandchild(self):
+        """Test it works on a 'parent-children-grandchild' dataset."""
+        # Setup
+        child1 = pd.DataFrame(data={
+            'child_ID': ['a', 'b', 'c', 'd', 'e'],
+            'parent_ID1': [0, 1, 2, 3, 3],
+            'data': ['0', '1', '2', '3', '4']
+        })
+        child2 = pd.DataFrame(data={
+            'child_ID': ['a', 'b', 'c', 'd', 'e'],
+            'parent_ID2': [0, 1, 2, 3, 4],
+            'data': ['0', '1', '2', '3', '4']
+        })
+        root_parent1 = pd.DataFrame(data={
+            'parent_ID1': [0, 1, 2, 3, 4],
+            'data': [True, False, False, False, True]
+        })
+        root_parent2 = pd.DataFrame(data={
+            'parent_ID2': [0, 1, 2, 3, 4],
+            'data': ['Yes', 'Yes', 'Maybe', 'No', 'No']
+        })
+        grandchild = pd.DataFrame(data={
+            'grandchild_ID': ['a', 'b', 'c', 'd', 'e'],
+            'child_ID1': ['a', 'b', 'c', 'd', 'e'],
+            'child_ID2': ['a', 'b', 'c', 'd', 'e'],
+            'data': ['0', '1', '2', '3', '4']
+        })
+        data = {
+            'parent1': root_parent1,
+            'child1': child1,
+            'child2': child2,
+            'parent2': root_parent2,
+            'grandchild': grandchild
+        }
+        metadata = MultiTableMetadata.load_from_dict({
+            'tables': {
+                'parent1': {
+                    'primary_key': 'parent_ID1',
+                    'columns': {
+                        'parent_ID1': {'sdtype': 'id'},
+                        'data': {'sdtype': 'categorical'}
+                    }
+                },
+                'parent2': {
+                    'primary_key': 'parent_ID2',
+                    'columns': {
+                        'parent_ID2': {'sdtype': 'id'},
+                        'data': {'sdtype': 'categorical'}
+                    }
+                },
+                'child1': {
+                    'primary_key': 'child_ID',
+                    'columns': {
+                        'child_ID': {'sdtype': 'id'},
+                        'parent_ID1': {'sdtype': 'id'},
+                        'data': {'sdtype': 'categorical'}
+                    }
+                },
+                'child2': {
+                    'primary_key': 'child_ID',
+                    'columns': {
+                        'child_ID': {'sdtype': 'id'},
+                        'parent_ID2': {'sdtype': 'id'},
+                        'data': {'sdtype': 'categorical'}
+                    }
+                },
+                'grandchild': {
+                    'primary_key': 'grandchild_ID',
+                    'columns': {
+                        'grandchild_ID': {'sdtype': 'id'},
+                        'child_ID1': {'sdtype': 'id'},
+                        'child_ID2': {'sdtype': 'id'},
+                        'data': {'sdtype': 'categorical'}
+                    }
+                },
+            },
+            'relationships': [
+                {
+                    'parent_table_name': 'parent1',
+                    'parent_primary_key': 'parent_ID1',
+                    'child_table_name': 'child1',
+                    'child_foreign_key': 'parent_ID1'
+                },
+                {
+                    'parent_table_name': 'parent2',
+                    'parent_primary_key': 'parent_ID2',
+                    'child_table_name': 'child2',
+                    'child_foreign_key': 'parent_ID2'
+                },
+                {
+                    'parent_table_name': 'child1',
+                    'parent_primary_key': 'child_ID',
+                    'child_table_name': 'grandchild',
+                    'child_foreign_key': 'child_ID1'
+                },
+                {
+                    'parent_table_name': 'child2',
+                    'parent_primary_key': 'child_ID',
+                    'child_table_name': 'grandchild',
+                    'child_foreign_key': 'child_ID1'
+                },
+            ]
+        })
+        synthesizer = HMASynthesizer(metadata)
+
+        metadata.visualize(
+            show_table_details='full',
+            show_relationship_labels=True,
+            output_filepath='my_metadata.png'
+        )
+
+        # Run
+        synthesizer.fit(data)
+        samples = synthesizer.sample(scale=1)
+
+        # Assert tables are the same
+        assert set(samples) == set(data)
+
+        # Assert columns are the same
+        for table_name, table in samples.items():
+            assert set(table.columns) == set(data[table_name].columns)
+
+        # Assert data values all exist in the original tables
+        for table_name, table in samples.items():
+            assert table['data'].isin(data[table_name]['data']).all()
+
+    def test_hma_three_rootparents_three_children_one_grandchild(self):
+        """Test it works on a 'three-parents-children-grandchild' dataset."""
+        # Setup
+        child1 = pd.DataFrame(data={
+            'child_ID': ['a', 'b', 'c', 'd', 'e'],
+            'parent_ID1': [0, 1, 2, 3, 3],
+            'data': ['0', '1', '2', '3', '4']
+        })
+        child2 = pd.DataFrame(data={
+            'child_ID': ['a', 'b', 'c', 'd', 'e'],
+            'parent_ID2': [0, 1, 2, 3, 4],
+            'parent_ID3': [0, 1, 2, 3, 4],
+            'data': ['0', '1', '2', '3', '4']
+        })
+        root_parent1 = pd.DataFrame(data={
+            'parent_ID1': [0, 1, 2, 3, 4],
+            'data': [True, False, False, False, True]
+        })
+        root_parent2 = pd.DataFrame(data={
+            'parent_ID2': [0, 1, 2, 3, 4],
+            'data': ['Yes', 'Yes', 'Maybe', 'No', 'No']
+        })
+        root_parent3 = pd.DataFrame(data={
+            'parent_ID3': [0, 1, 2, 3, 4],
+            'data': ['Yes', 'Yes', 'Maybe', 'No', 'No']
+        })
+        grandchild = pd.DataFrame(data={
+            'grandchild_ID': ['a', 'b', 'c', 'd', 'e'],
+            'child_ID1': ['a', 'b', 'c', 'd', 'e'],
+            'child_ID2': ['a', 'b', 'c', 'd', 'e'],
+            'data': ['0', '1', '2', '3', '4']
+        })
+        data = {
+            'parent1': root_parent1,
+            'child1': child1,
+            'child2': child2,
+            'parent2': root_parent2,
+            'parent3': root_parent3,
+            'grandchild': grandchild
+        }
+        metadata = MultiTableMetadata.load_from_dict({
+            'tables': {
+                'parent1': {
+                    'primary_key': 'parent_ID1',
+                    'columns': {
+                        'parent_ID1': {'sdtype': 'id'},
+                        'data': {'sdtype': 'categorical'}
+                    }
+                },
+                'parent2': {
+                    'primary_key': 'parent_ID2',
+                    'columns': {
+                        'parent_ID2': {'sdtype': 'id'},
+                        'data': {'sdtype': 'categorical'}
+                    }
+                },
+                'parent3': {
+                    'primary_key': 'parent_ID3',
+                    'columns': {
+                        'parent_ID3': {'sdtype': 'id'},
+                        'data': {'sdtype': 'categorical'}
+                    }
+                },
+                'child1': {
+                    'primary_key': 'child_ID',
+                    'columns': {
+                        'child_ID': {'sdtype': 'id'},
+                        'parent_ID1': {'sdtype': 'id'},
+                        'data': {'sdtype': 'categorical'}
+                    }
+                },
+                'child2': {
+                    'primary_key': 'child_ID',
+                    'columns': {
+                        'child_ID': {'sdtype': 'id'},
+                        'parent_ID2': {'sdtype': 'id'},
+                        'parent_ID3': {'sdtype': 'id'},
+                        'data': {'sdtype': 'categorical'}
+                    }
+                },
+                'grandchild': {
+                    'primary_key': 'grandchild_ID',
+                    'columns': {
+                        'grandchild_ID': {'sdtype': 'id'},
+                        'child_ID1': {'sdtype': 'id'},
+                        'child_ID2': {'sdtype': 'id'},
+                        'data': {'sdtype': 'categorical'}
+                    }
+                },
+            },
+            'relationships': [
+                {
+                    'parent_table_name': 'parent1',
+                    'parent_primary_key': 'parent_ID1',
+                    'child_table_name': 'child1',
+                    'child_foreign_key': 'parent_ID1'
+                },
+                {
+                    'parent_table_name': 'parent2',
+                    'parent_primary_key': 'parent_ID2',
+                    'child_table_name': 'child2',
+                    'child_foreign_key': 'parent_ID2'
+                },
+                {
+                    'parent_table_name': 'parent3',
+                    'parent_primary_key': 'parent_ID3',
+                    'child_table_name': 'child2',
+                    'child_foreign_key': 'parent_ID3'
+                },
+                {
+                    'parent_table_name': 'child1',
+                    'parent_primary_key': 'child_ID',
+                    'child_table_name': 'grandchild',
+                    'child_foreign_key': 'child_ID1'
+                },
+                {
+                    'parent_table_name': 'child2',
+                    'parent_primary_key': 'child_ID',
+                    'child_table_name': 'grandchild',
+                    'child_foreign_key': 'child_ID1'
+                },
+            ]
+        })
+        synthesizer = HMASynthesizer(metadata)
+
+        # Run
+        synthesizer.fit(data)
+        samples = synthesizer.sample(scale=1)
+
+        # Assert tables are the same
+        assert set(samples) == set(data)
+
+        # Assert columns are the same
+        for table_name, table in samples.items():
+            assert set(table.columns) == set(data[table_name].columns)
+
+        # Assert data values all exist in the original tables
+        for table_name, table in samples.items():
+            assert table['data'].isin(data[table_name]['data']).all()
